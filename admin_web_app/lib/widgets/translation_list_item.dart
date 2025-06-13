@@ -24,21 +24,31 @@ class TranslationListItem extends StatelessWidget {
           children: [
             Text(
               'Key: ${entry.key}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             ...entry.translations.entries.map((mapEntry) {
               return Padding(
-                padding: const EdgeInsets.only(left: 8.0, top: 2.0, bottom: 2.0),
+                padding:
+                    const EdgeInsets.only(left: 8.0, top: 2.0, bottom: 2.0),
                 child: Text('${mapEntry.key.toUpperCase()}: ${mapEntry.value}'),
               );
-            }).toList(),
+            }),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  icon: const Icon(Icons.edit, size: 20),
+                  icon: const Text(
+                    '\uE3C9',
+                    style: TextStyle(
+                      fontFamily: 'MaterialIcons',
+                      fontSize: 20,
+                    ),
+                  ),
                   label: const Text('Edit'),
                   onPressed: onEdit,
                   style: TextButton.styleFrom(
@@ -47,7 +57,13 @@ class TranslationListItem extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
-                  icon: const Icon(Icons.delete, size: 20),
+                  icon: const Text(
+                    '\uE872',
+                    style: TextStyle(
+                      fontFamily: 'MaterialIcons',
+                      fontSize: 20,
+                    ),
+                  ),
                   label: const Text('Delete'),
                   onPressed: onDelete,
                   style: TextButton.styleFrom(

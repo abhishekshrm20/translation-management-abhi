@@ -22,7 +22,8 @@ class AdminApp extends StatelessWidget {
       title: 'Translation Admin',
       home: BlocProvider(
         create: (context) =>
-        AdminTranslationsBloc(MockAdminTranslationService())..add(LoadAdminTranslations()),
+            AdminTranslationsBloc(MockAdminTranslationService())
+              ..add(LoadAdminTranslations()),
         child: const AdminHomePage(),
       ),
     );
@@ -57,22 +58,27 @@ class _AdminHomePageState extends State<AdminHomePage> {
       appBar: AppBar(title: const Text('Manage Translations')),
       body: BlocBuilder<AdminTranslationsBloc, AdminTranslationsState>(
         builder: (context, state) {
-          if (state is AdminTranslationsLoading || state is AdminTranslationsInitial) {
+          if (state is AdminTranslationsLoading ||
+              state is AdminTranslationsInitial) {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is AdminTranslationsLoaded) {
             if (state.translations.isEmpty) {
-              return const Center(child: Text('No translations yet. Add some!'));
+              return const Center(
+                  child: Text('No translations yet. Add some!'));
             }
             return ListView.builder(
               itemCount: state.translations.length,
               itemBuilder: (context, index) {
                 final entry = state.translations[index];
-                return TranslationListItem( // You'll create this widget
+                return TranslationListItem(
+                  // You'll create this widget
                   entry: entry,
                   onEdit: () => _showTranslationForm(entry: entry),
                   onDelete: () {
-                    context.read<AdminTranslationsBloc>().add(DeleteAdminTranslation(entry.id));
+                    context
+                        .read<AdminTranslationsBloc>()
+                        .add(DeleteAdminTranslation(entry.id));
                   },
                 );
               },
@@ -86,7 +92,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showTranslationForm(),
-        child: const Icon(Icons.add),
+        child: const Text(
+          '\uE145', // Add icon
+          style: TextStyle(
+            fontFamily: 'MaterialIcons',
+            fontSize: 24,
+          ),
+        ),
       ),
     );
   }
