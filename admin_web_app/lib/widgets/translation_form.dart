@@ -20,29 +20,34 @@ class TranslationFormDialog extends StatefulWidget {
   State<TranslationFormDialog> createState() => _TranslationFormDialogState();
 }
 
-class _TranslationFormDialogState extends State<TranslationFormDialog> {
+class _TranslationFormDialogState extends State<TranslationFormDialog>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _keyController;
   late Map<String, TextEditingController> _localeControllers;
+  late TabController _tabController;
 
   bool get _isEditing => widget.existingEntry != null;
 
   @override
   void initState() {
     super.initState();
-    _keyController = TextEditingController(text: widget.existingEntry?.key ?? '');
-    _localeControllers = {};
-    for (var locale in widget.supportedLocales) {
-      _localeControllers[locale] = TextEditingController(
-        text: widget.existingEntry?.translations[locale] ?? '',
-      );
-    }
+    _keyController =
+        TextEditingController(text: widget.existingEntry?.key ?? '');
+    _localeControllers = {
+      for (var locale in widget.supportedLocales)
+        locale: TextEditingController(
+            text: widget.existingEntry?.translations[locale] ?? '')
+    };
+    _tabController =
+        TabController(length: widget.supportedLocales.length, vsync: this);
   }
 
   @override
   void dispose() {
     _keyController.dispose();
     _localeControllers.forEach((_, controller) => controller.dispose());
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -54,7 +59,8 @@ class _TranslationFormDialogState extends State<TranslationFormDialog> {
         translations[locale] = controller.text.trim();
       });
 
-      final adminBloc = BlocProvider.of<AdminTranslationsBloc>(widget.blocContext);
+      final adminBloc =
+          BlocProvider.of<AdminTranslationsBloc>(widget.blocContext);
 
       if (_isEditing) {
         final updatedEntry = widget.existingEntry!.copyWith(
@@ -73,11 +79,12 @@ class _TranslationFormDialogState extends State<TranslationFormDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(_isEditing ? 'Edit Translation' : 'Add New Translation'),
-      content: SingleChildScrollView( // Important for smaller dialogs or many locales
+      content: SizedBox(
+        width: 400,
+        height: 360,
         child: Form(
           key: _formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               TextFormField(
                 controller: _keyController,
@@ -90,32 +97,53 @@ class _TranslationFormDialogState extends State<TranslationFormDialog> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Key cannot be empty';
                   }
-                  // Add more validation if needed (e.g., no spaces, specific format)
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
-              Text('Translations:', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              ...widget.supportedLocales.map((locale) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: TextFormField(
-                    controller: _localeControllers[locale],
-                    decoration: InputDecoration(
-                      labelText: 'Value for "${locale.toUpperCase()}"',
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      // Optionally, make some locales mandatory
-                      // if (locale == 'en' && (value == null || value.trim().isEmpty)) {
-                      //   return 'English translation cannot be empty';
-                      // }
-                      return null;
-                    },
+              const SizedBox(height: 16),
+              DefaultTabController(
+                length: widget.supportedLocales.length,
+                child: Expanded(
+                  child: Column(
+                    children: [
+                      TabBar(
+                        controller: _tabController,
+                        isScrollable: true,
+                        labelColor: Theme.of(context).colorScheme.primary,
+                        tabs: widget.supportedLocales
+                            .map((locale) => Tab(text: locale.toUpperCase()))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: widget.supportedLocales.map((locale) {
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: TextFormField(
+                                controller: _localeControllers[locale],
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Translation for "${locale.toUpperCase()}"',
+                                  border: const OutlineInputBorder(),
+                                ),
+                                validator: (value) {
+                                  // Optional: Make English mandatory
+                                  // if (locale == 'en' && (value == null || value.trim().isEmpty)) {
+                                  //   return 'English translation is required';
+                                  // }
+                                  return null;
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }).toList(),
+                ),
+              ),
             ],
           ),
         ),
@@ -123,9 +151,7 @@ class _TranslationFormDialogState extends State<TranslationFormDialog> {
       actions: <Widget>[
         TextButton(
           child: const Text('Cancel'),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
+          onPressed: () => Navigator.of(context).pop(),
         ),
         ElevatedButton(
           child: Text(_isEditing ? 'Save Changes' : 'Add Translation'),
