@@ -1,4 +1,44 @@
-# Miscellaneous
+# Flutter/Dart/Pub related
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Android related
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# iOS/macOS related
+ios/Pods/
+ios/Runner.xcworkspace
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/ServiceDefinitions.json
+ios/xcuserdata/
+ios/DerivedData/
+ios/.symlinks/
+ios/.metadata
+macos/Flutter/ephemeral/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# VS Code settings
+.vscode/
+
+# IntelliJ related
+.idea/
+*.iml
+
+# Misc
+*.log
+*.tmp
+
+# Environment# Miscellaneous
 *.class
 *.log
 *.pyc
