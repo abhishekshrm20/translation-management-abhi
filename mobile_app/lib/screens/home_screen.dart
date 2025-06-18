@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_app/blocs/mobile_localization_bloc.dart';
@@ -6,8 +7,26 @@ import 'package:mobile_app/blocs/mobile_localization_state.dart';
 import 'package:mobile_app/localization/app_localization.dart';
 import 'package:mobile_app/main.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  final Future<List<Map<String, dynamic>>> Function()? onRefresh;
+
+  const HomeScreen({super.key, this.onRefresh});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<Map<String, dynamic>> _fetchedTranslations = [];
+
+  Future<void> _fetchAndDisplayRawTranslations() async {
+    if (widget.onRefresh != null) {
+      final data = await widget.onRefresh!();
+      setState(() {
+        _fetchedTranslations = data;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +66,9 @@ class HomeScreen extends StatelessWidget {
         },
         builder: (context, state) {
           if (state.isLoading && state.appLocalizations == null) {
-            // Only show global loader on initial load
             return const Center(child: CircularProgressIndicator());
           }
+
           if (state.appLocalizations == null) {
             return const Center(child: Text('Translations not loaded.'));
           }
@@ -57,43 +76,67 @@ class HomeScreen extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Text(
-                  AppLocalizations.of(context)!.translate('greeting'),
-                  style: Theme.of(context).textTheme.headlineMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  AppLocalizations.of(context)!.translate('farewell'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  AppLocalizations.of(context)!.translate(
-                      'missing_key_example'), // Example of a missing key
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                if (state
-                    .isLoading) // Show loader for subsequent fetches/switches
-                  const Center(
-                      child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(),
-                  )),
-                ElevatedButton(
-                  onPressed: state.isLoading
-                      ? null
-                      : () {
-                          localizationBloc.add(UpdateTranslationsFromServer());
-                        },
-                  child: Text(AppLocalizations.of(context)!
-                      .translate('refresh_translations_button')),
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: <Widget>[
+                        Text(
+                          AppLocalizations.of(context)!.translate('greeting'),
+                          style: Theme.of(context).textTheme.headlineMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          AppLocalizations.of(context)!.translate('farewell'),
+                          style: Theme.of(context).textTheme.titleLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          AppLocalizations.of(context)!
+                              .translate('missing_key_example'),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 40),
+                        if (state.isLoading)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        ElevatedButton(
+                          onPressed: state.isLoading
+                              ? null
+                              : () {
+                                  localizationBloc
+                                      .add(UpdateTranslationsFromServer());
+                                },
+                          child: Text(AppLocalizations.of(context)!
+                              .translate('refresh_translations_button')),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: _fetchAndDisplayRawTranslations,
+                          icon: const Icon(Icons.cloud_download),
+                          label: const Text('Show Raw Translations'),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_fetchedTranslations.isNotEmpty)
+                          ..._fetchedTranslations.map((entry) {
+                            return Card(
+                              child: ListTile(
+                                title: Text(entry['key']),
+                                subtitle:
+                                    Text(entry['translations']['en'] ?? '—'),
+                              ),
+                            );
+                          }).toList(),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
