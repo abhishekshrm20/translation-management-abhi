@@ -1,11 +1,13 @@
+import 'dart:convert';
 import 'package:admin_web_app/blocs/admin_translations_bloc.dart';
 import 'package:admin_web_app/blocs/admin_translations_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:http/http.dart' as http;
 import 'package:translation_domain/translation_domain.dart';
 
 class TranslationFormDialog extends StatefulWidget {
-  final BuildContext blocContext; // To access the BLoC
+  final BuildContext blocContext;
   final TranslationEntry? existingEntry;
   final List<String> supportedLocales;
 
@@ -71,7 +73,41 @@ class _TranslationFormDialogState extends State<TranslationFormDialog>
       } else {
         adminBloc.add(AddAdminTranslation(key, translations));
       }
-      Navigator.of(context).pop(); // Close the dialog
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<String> _getAISuggestion(
+      String key, String enText, String locale) async {
+    const apiKey = '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';
+
+    final prompt =
+        "Suggest a professional translation for key '$key' into '$locale'. "
+        "English: \"$enText\"";
+
+    final response = await http.post(
+      Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+          {
+            "role": "user",
+            "content":
+                "Translate the phrase \"$enText\" into $locale. Context: UI label. Key: $key."
+          }
+        ]
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['choices'][0]['message']['content'].trim();
+    } else {
+      throw Exception("AI Suggestion failed: ${response.body}");
     }
   }
 
@@ -81,7 +117,7 @@ class _TranslationFormDialogState extends State<TranslationFormDialog>
       title: Text(_isEditing ? 'Edit Translation' : 'Add New Translation'),
       content: SizedBox(
         width: 400,
-        height: 360,
+        height: 380,
         child: Form(
           key: _formKey,
           child: Column(
@@ -93,12 +129,9 @@ class _TranslationFormDialogState extends State<TranslationFormDialog>
                   hintText: 'e.g., greeting, common.ok',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Key cannot be empty';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Key cannot be empty'
+                    : null,
               ),
               const SizedBox(height: 16),
               DefaultTabController(
@@ -121,20 +154,58 @@ class _TranslationFormDialogState extends State<TranslationFormDialog>
                           children: widget.supportedLocales.map((locale) {
                             return Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: TextFormField(
-                                controller: _localeControllers[locale],
-                                decoration: InputDecoration(
-                                  labelText:
-                                      'Translation for "${locale.toUpperCase()}"',
-                                  border: const OutlineInputBorder(),
-                                ),
-                                validator: (value) {
-                                  // Optional: Make English mandatory
-                                  // if (locale == 'en' && (value == null || value.trim().isEmpty)) {
-                                  //   return 'English translation is required';
-                                  // }
-                                  return null;
-                                },
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _localeControllers[locale],
+                                      decoration: InputDecoration(
+                                        labelText:
+                                            'Translation for "${locale.toUpperCase()}"',
+                                        border: const OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.auto_fix_high),
+                                    tooltip: 'AI Suggestion',
+                                    onPressed: () async {
+                                      final enText = _localeControllers['en']
+                                              ?.text
+                                              .trim() ??
+                                          '';
+                                      final key = _keyController.text.trim();
+
+                                      if (enText.isEmpty || key.isEmpty) return;
+
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (_) => const Center(
+                                            child: CircularProgressIndicator()),
+                                      );
+
+                                      try {
+                                        final suggestion =
+                                            await _getAISuggestion(
+                                                key, enText, locale);
+                                        _localeControllers[locale]?.text =
+                                            suggestion;
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text('❌ AI Error: $e')),
+                                        );
+                                      } finally {
+                                        Navigator.of(context)
+                                            .pop(); // Close loader
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
                             );
                           }).toList(),
